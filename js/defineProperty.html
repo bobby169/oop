@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vue.js数据驱动视图原理</title>
+</head>
+<body>
+<div>
+    <p>hello <span id='name'></span></p>
+</div>
+<script>
+    //http://www.jb51.net/article/83542.htm
+    //https://robertnyman.com/2009/05/28/getters-and-setters-with-javascript-code-samples-and-demos/
+    //https://johnresig.com/blog/javascript-getters-and-setters/
+    //标准的Get和Set访问器的实现
+
+    function Field(val){
+        this.value = val;
+    }
+    Field.prototype = {
+        get value(){
+            return this._value;
+            //return this.value 在get value(){}方法里返回 this.value,就会又去调用value的get 方法，陷入死循环，造成方法栈溢出
+        },
+        set value(val){
+            this._value = val+'-haha';
+            //this.value = val+'-haha';在set value(){}方法里执行this.value,就会又去调用value的set 方法，陷入死循环，造成方法栈溢出
+        }
+    };
+    var field = new Field("test");
+    field.value="test2";
+    console.info(field.value);
+
+    //要改变属性的get /set 特性，有两种方式：
+    //a.就是用Object.defineProperty()
+    var object={
+        _name:"Daisy"
+    };
+    Object.defineProperty(object,"name",{//这里的方法名name,就表示定义了一个name属性（因此才能通过object.name访问）,只定义了getter访问器,没有定义[[value]]值
+        get:function (){//只定义了get 特性，因此只能读不能写
+            return this._name;
+        }
+    });
+    console.info(object.name);//"Daisy"
+    object.name="jack";//只定义了getter访问器，因此写入失效
+    console.info(object.name);//"Daisy"
+    //注意Object.defineProperty(object,pro,{})中的属性名一定要和object.pro访问的属性对应
+
+    //b.就是用用 get set 关键字：
+    var object={
+        _name:"Daisy",
+        get name(){//这里的方法名name ,就表示定义了一个name属性（因此才能通过object.name访问），只定义了getter访问器，没有定义[[value]]值
+            return this._name;
+        }//get,set方法只是属性的特性 ，不是对象方法，决定属性能否、怎么读写
+    };
+    console.info(object.name);// Daisy这里去掉下划线 方法就是Daisy ；加上就是undefined
+    object.name="jack";//只定义了getter访问器，因此只能读不能写
+    console.info(object.name);//Daisy
+
+    //以上两种方法等效。注意的是以上两种方法object对象当中都将有有两个属性：_name(有初始值) name(无初始值)，通过浏览器控制台可以看到
+
+
+     //总结
+     //只声明了get pro(){}属性 可读不可写；
+     //只声明 set pro(){}属性可写不可读。
+     //如果都不声明，属性可读可写；
+     //如果都声明就按照，get set 定义的方法，读写；
+     //如果都声明了，但是定义的读写方法不能正确读写，get/set失效。变成默认的可读可写
+     //在prototype里面定义的value属性，定义了get 特性。依然可以控制value属性的读写 。也就是说obj.value访问属性时，会调用get方法，先在对象本身寻找，如果没有，再到prototype寻找，如果都没有才算没有定义，默认的既可读又可写。
+
+
+    var p = {
+        name:"chen",
+        work:function() {
+            console.log("wording...");
+        },
+        _age:18,
+        get age(){
+            return this._age;
+        },
+        set age(val) {
+            if (val<0 || val> 100) {//如果年龄大于100就抛出错误
+                throw new Error("invalid value")
+            }else{
+                this._age = val;
+            }
+        }
+    };
+    console.log(p.name);//输出chen
+
+
+    var data = {
+        name:'world'
+    };
+
+    Object.defineProperty(data,"name",{
+        get:function () {
+            return 'world';
+        },
+        set:function (name) {
+            watcher(name);
+        }
+    });
+
+    function watcher(name) {
+        document.getElementById('name').innerHTML = name;
+    }
+
+    watcher(data.name);
+
+
+</script>
+</body>
+</html>
